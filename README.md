@@ -10,7 +10,7 @@ The program also
 
 
 
-This project uses the component "mjd_lolind32". Use it to get insights in how to use this component. Go to the component directory "components/mjd_lolind32" for the documentation.
+This project uses the component "mjd_lolind32". Use it to get insights in how to use this component. Go to the component directory "components/mjd_lolind32" for more **documentation**.
 
 
 

@@ -40,16 +40,10 @@ int mjd_compare_ints(const void * a, const void * b) {
  * BYTES and BINARY REPRESENTATION
  */
 
-/*
- * Convert uint8_t to binary coded decimal
- */
 uint8_t mjd_byte_to_bcd(uint8_t val) {
     return ((val / 10 * 16) + (val % 10));
 }
 
-/*
- * Convert binary coded decimal to uint8_t
- */
 uint8_t mjd_bcd_to_byte(uint8_t val) {
     return ((val / 16 * 10) + (val % 16));
 }
@@ -255,8 +249,18 @@ esp_err_t mjd_crypto_xor_cipher(const uint8_t param_key, uint8_t* param_ptr_valu
 }
 
 /**********
- * DATE TIME
+ * DATE TIME & DELAYS
+ *
  */
+void mjd_delay_millisec(uint32_t param_millisec) {
+    if (param_millisec > 500) {
+        vTaskDelay(param_millisec / portTICK_PERIOD_MS);
+    }
+    else if (param_millisec > 0) {
+        ets_delay_us(param_millisec * 1000);
+    }
+}
+
 uint32_t mjd_seconds_to_milliseconds(uint32_t seconds) {
     return seconds * 1000;
 }
@@ -266,6 +270,7 @@ uint32_t mjd_seconds_to_microseconds(uint32_t seconds) {
 }
 
 void mjd_log_time() {
+    // @example I (3540) mjd: *** DATETIME 19700101000003 Thu Jan  1 00:00:03 1970
     ESP_LOGD(TAG, "%s()", __FUNCTION__);
 
     time_t current_time;
@@ -284,12 +289,12 @@ void mjd_log_time() {
     if (current_time_string[strlen(current_time_string) - 1] == '\n') {
         current_time_string[strlen(current_time_string) - 1] = '\0';
     }
-    ESP_LOGI(TAG, "*** %s %s", buffer, current_time_string);
+    ESP_LOGI(TAG, "*** DATETIME %s %s", buffer, current_time_string);
 }
 
 void mjd_get_current_time_yyyymmddhhmmss(char *ptr_buffer) {
     // @dep buffer 14+1
-    // @example "*** 19700101000000 Thu Jan  1 00:00:00 1970\n"
+    // @example I (3550) myapp:   19700101000003
     ESP_LOGD(TAG, "%s()", __FUNCTION__);
 
     time_t current_time;
@@ -328,9 +333,6 @@ void mjd_rtos_wait_forever() {
     }
 }
 
-/**********
- * ESP32 SYSTEM
- */
 /**********
  * ESP32 SYSTEM
  */
@@ -449,8 +451,12 @@ esp_err_t mjd_log_memory_statistics() {
 
 /**********
  * ESP32: BOOT INFO, DEEP SLEEP and WAKE UP
+ *
+ * @doc RTC_DATA_ATTR Forces data into RTC Slow Memory. See "docs/deep-sleep-stub.rst".
+ *                    Any variable marked with this attribute will keep its value after a deep sleep / wakeup cycle.
+ *
  */
-static RTC_DATA_ATTR uint32_t mcu_boot_count = 0; //@important Allocated in RTC Fast Memory (= a persistent data area after a deep sleep restart)
+static RTC_DATA_ATTR uint32_t mcu_boot_count = 0; //@important Allocated in RTC Slow Memory (= a persistent data area after a deep sleep restart)
 
 uint32_t mjd_increment_mcu_boot_count() {
     ESP_LOGD(TAG, "%s()", __FUNCTION__);
@@ -474,14 +480,17 @@ void mjd_log_wakeup_details() {
     ESP_LOGD(TAG, "%s()", __FUNCTION__);
 
     /*
-     * verify the wakeup reason
-     * esp_sleep.h
-     ESP_SLEEP_WAKEUP_UNDEFINED,    //! In case of deep sleep, reset was not caused by exit from deep sleep
-     ESP_SLEEP_WAKEUP_EXT0,         //! Wakeup caused by external signal using RTC_IO
-     ESP_SLEEP_WAKEUP_EXT1,         //! Wakeup caused by external signal using RTC_CNTL
-     ESP_SLEEP_WAKEUP_TIMER,        //! Wakeup caused by timer
-     ESP_SLEEP_WAKEUP_TOUCHPAD,     //! Wakeup caused by touchpad
-     ESP_SLEEP_WAKEUP_ULP,          //! Wakeup caused by ULP program
+     * Verify the wakeup reason.
+     * @dep esp_sleep.h
+        ESP_SLEEP_WAKEUP_UNDEFINED,    //!< In case of deep sleep, reset was not caused by exit from deep sleep
+        ESP_SLEEP_WAKEUP_ALL,          //!< Not a wakeup cause, used to disable all wakeup sources with esp_sleep_disable_wakeup_source
+        ESP_SLEEP_WAKEUP_EXT0,         //!< Wakeup caused by external signal using RTC_IO
+        ESP_SLEEP_WAKEUP_EXT1,         //!< Wakeup caused by external signal using RTC_CNTL
+        ESP_SLEEP_WAKEUP_TIMER,        //!< Wakeup caused by timer
+        ESP_SLEEP_WAKEUP_TOUCHPAD,     //!< Wakeup caused by touchpad
+        ESP_SLEEP_WAKEUP_ULP,          //!< Wakeup caused by ULP program
+        ESP_SLEEP_WAKEUP_GPIO,         //!< Wakeup caused by GPIO (light sleep only)
+        ESP_SLEEP_WAKEUP_UART,         //!< Wakeup caused by UART (light sleep only)
      */
     char wakeup_reason[128];
 
